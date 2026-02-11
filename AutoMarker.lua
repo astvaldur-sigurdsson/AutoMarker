@@ -219,11 +219,15 @@ end
 local function HasMana(unit)
     if not UnitExists(unit) then return false end
     
-    local powerType = UnitPowerType(unit)
+    local success, powerType = pcall(UnitPowerType, unit)
+    if not success then return false end
+    
     -- 0 = Mana
     if powerType == 0 then
-        local maxPower = UnitPowerMax(unit, 0)
-        return maxPower > 0
+        local success2, maxPower = pcall(UnitPowerMax, unit, 0)
+        if success2 then
+            return maxPower > 0
+        end
     end
     return false
 end
@@ -232,17 +236,19 @@ end
 local function IsCasting(unit)
     if not UnitExists(unit) then return false end
     
-    local name = UnitCastingInfo(unit)
-    local channelName = UnitChannelInfo(unit)
+    local success, name = pcall(UnitCastingInfo, unit)
+    local success2, channelName = pcall(UnitChannelInfo, unit)
     
-    return name ~= nil or channelName ~= nil
+    return (success and name ~= nil) or (success2 and channelName ~= nil)
 end
 
 -- Check if a unit is elite
 local function IsElite(unit)
     if not UnitExists(unit) then return false end
     
-    local classification = UnitClassification(unit)
+    local success, classification = pcall(UnitClassification, unit)
+    if not success then return false end
+    
     -- "elite" = elite, "rareelite" = rare elite, "worldboss" = boss
     return classification == "elite" or classification == "rareelite" or classification == "worldboss"
 end
@@ -299,22 +305,29 @@ end
 -- Check if unit should be marked
 local function ShouldMarkUnit(unit)
     if not UnitExists(unit) then return false, false end
-    if not UnitCanAttack("player", unit) then 
-        local success, name = pcall(UnitName, unit)
-        name = success and name or "Unknown"
-        DebugPrint("Unit can't be attacked: " .. name)
+    
+    -- Protected unit API calls
+    local success, canAttack = pcall(UnitCanAttack, "player", unit)
+    if not success or not canAttack then 
+        local success2, name = pcall(UnitName, unit)
+        name = success2 and name or "Unknown"
+        DebugPrint("Unit can't be attacked or is protected: " .. name)
         return false, false 
     end
-    if UnitIsDead(unit) then 
-        local success, name = pcall(UnitName, unit)
-        name = success and name or "Unknown"
+    
+    local success3, isDead = pcall(UnitIsDead, unit)
+    if success3 and isDead then 
+        local success4, name = pcall(UnitName, unit)
+        name = success4 and name or "Unknown"
         DebugPrint("Unit is dead: " .. name)
         return false, false 
     end
     -- Removed strict combat check - mark any enemy in range
     
-    -- Check if already marked
-    if GetRaidTargetIndex(unit) then
+    -- Check if already marked (protected call)
+    local success5, existingMark = pcall(GetRaidTargetIndex, unit)
+    if success5 and existingMark then
+        DebugPrint("Unit already has a mark")
         return false, false
     end
     
@@ -357,10 +370,10 @@ local function TryMarkUnit(unit)
     unitName = success and unitName or "Unknown"
     DebugPrint("TryMark: Unit exists - " .. unitName)
     
-    -- Get unit GUID for tracking
-    local guid = UnitGUID(unit)
-    if not guid then 
-        DebugPrint("TryMark: No GUID")
+    -- Get unit GUID for tracking (protected call)
+    local success2, guid = pcall(UnitGUID, unit)
+    if not success2 or not guid then 
+        DebugPrint("TryMark: No GUID (protected unit)")
         return false 
     end
     
