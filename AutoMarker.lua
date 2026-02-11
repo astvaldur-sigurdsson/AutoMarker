@@ -361,51 +361,73 @@ end
 
 -- Try to mark a unit
 local function TryMarkUnit(unit)
-    if not UnitExists(unit) then 
-        DebugPrint("TryMark: Unit doesn't exist")
-        return false 
-    end
-    
-    local success, unitName = pcall(UnitName, unit)
-    unitName = success and unitName or "Unknown"
-    DebugPrint("TryMark: Unit exists - " .. unitName)
-    
-    -- Get unit GUID for tracking (protected call)
-    local success2, guid = pcall(UnitGUID, unit)
-    if not success2 or not guid then 
-        DebugPrint("TryMark: No GUID (protected unit)")
-        return false 
-    end
-    
-    -- Skip if we've already processed this unit
-    if markedUnits[guid] then 
-        DebugPrint("TryMark: Already processed")
-        return false 
-    end
-    
-    local shouldMark, isEliteUnit = ShouldMarkUnit(unit)
-    if shouldMark then
-        local mark = GetNextAvailableMark(isEliteUnit)
-        if mark then
-            local success3, err = pcall(SetRaidTarget, unit, mark)
-            if not success3 then
-                DebugPrint("Failed to set raid target: " .. tostring(err))
-                return false
-            end
-            markedUnits[guid] = true
-            local eliteStr = isEliteUnit and " (elite)" or ""
-            local success2, name = pcall(UnitName, unit)
-            name = success2 and name or "Unknown"
-            DebugPrint("Marked " .. name .. eliteStr .. " with mark " .. mark)
-            return true
-        else
-            DebugPrint("No available marks")
+    -- Wrap entire function in pcall to catch any tainted data issues
+    local success_full, result = pcall(function()
+        if not UnitExists(unit) then 
+            DebugPrint("TryMark: Unit doesn't exist")
+            return false 
         end
-    else
-        DebugPrint("TryMark: Should not mark this unit")
+        
+        local success, unitName = pcall(UnitName, unit)
+        unitName = success and unitName or "Unknown"
+        DebugPrint("TryMark: Unit exists - " .. unitName)
+        
+        -- Get unit GUID for tracking (protected call)
+        local success2, guid = pcall(UnitGUID, unit)
+        if not success2 or not guid then 
+            DebugPrint("TryMark: No GUID (protected unit)")
+            return false 
+        end
+        
+        -- Skip if we've already processed this unit (protected access)
+        local already_processed = false
+        local success3 = pcall(function()
+            if markedUnits[guid] then
+                already_processed = true
+            end
+        end)
+        
+        if already_processed then 
+            DebugPrint("TryMark: Already processed")
+            return false 
+        end
+        
+        local shouldMark, isEliteUnit = ShouldMarkUnit(unit)
+        if shouldMark then
+            local mark = GetNextAvailableMark(isEliteUnit)
+            if mark then
+                local success4, err = pcall(SetRaidTarget, unit, mark)
+                if not success4 then
+                    DebugPrint("Failed to set raid target: " .. tostring(err))
+                    return false
+                end
+                
+                -- Mark as processed (protected write)
+                pcall(function()
+                    markedUnits[guid] = true
+                end)
+                
+                local eliteStr = isEliteUnit and " (elite)" or ""
+                local success5, name = pcall(UnitName, unit)
+                name = success5 and name or "Unknown"
+                DebugPrint("Marked " .. name .. eliteStr .. " with mark " .. mark)
+                return true
+            else
+                DebugPrint("No available marks")
+            end
+        else
+            DebugPrint("TryMark: Should not mark this unit")
+        end
+        
+        return false
+    end)
+    
+    if not success_full then
+        DebugPrint("ERROR in TryMarkUnit: " .. tostring(result))
+        return false
     end
     
-    return false
+    return result
 end
 
 -- Check if auto-marking is enabled for current group type
