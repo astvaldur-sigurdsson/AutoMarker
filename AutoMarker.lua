@@ -416,12 +416,14 @@ local function ScanForTargets()
         DebugPrint("No target selected")
     end
     
-    -- Check nameplate units using modern API
+    -- Check nameplate units using modern API (with error protection for Plater compatibility)
     DebugPrint("Checking C_NamePlate API...")
-    local nameplates = C_NamePlate.GetNamePlates()
-    DebugPrint("C_NamePlate.GetNamePlates() returned: " .. type(nameplates))
+    local success, nameplates = pcall(function() return C_NamePlate.GetNamePlates() end)
     
-    if nameplates then
+    if not success then
+        DebugPrint("ERROR calling C_NamePlate.GetNamePlates(): " .. tostring(nameplates))
+        DebugPrint("This may be caused by nameplate addons like Plater")
+    elseif nameplates then
         local count = #nameplates
         DebugPrint("Found " .. count .. " nameplates")
         
@@ -430,19 +432,28 @@ local function ScanForTargets()
         end
         
         for i, nameplate in ipairs(nameplates) do
-            if nameplate then
-                if nameplate.namePlateUnitToken then
+            local success2, err = pcall(function()
+                if nameplate and nameplate.namePlateUnitToken then
                     DebugPrint("Nameplate " .. i .. ": Token=" .. nameplate.namePlateUnitToken)
                     TryMarkUnit(nameplate.namePlateUnitToken)
-                else
-                    DebugPrint("Nameplate " .. i .. ": No unit token")
                 end
-            else
-                DebugPrint("Nameplate " .. i .. ": Is nil")
+            end)
+            if not success2 then
+                DebugPrint("ERROR processing nameplate " .. i .. ": " .. tostring(err))
             end
         end
     else
         DebugPrint("C_NamePlate.GetNamePlates() returned nil")
+    end
+    
+    -- Alternative: Try nameplate units directly
+    DebugPrint("Trying direct nameplate units...")
+    for i = 1, 40 do
+        local unit = "nameplate" .. i
+        if UnitExists(unit) then
+            DebugPrint("Found nameplate unit: " .. unit)
+            TryMarkUnit(unit)
+        end
     end
     
     -- Check focus
