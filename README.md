@@ -1,14 +1,24 @@
 # AutoMarker
 
-A World of Warcraft addon that automatically marks mobs in combat with mana or cast bars.
+A World of Warcraft addon that automatically marks mobs in combat based on their properties.
 
 ## Features
 
-- Automatically detects and marks mobs that have mana bars
-- Automatically detects and marks mobs that are actively casting or channeling
-- Smart mark prioritization (Skull for casters/mana users first)
-- Only marks during combat when in a group/raid
-- Respects raid permissions (requires raid lead or assist)
+- **Elite Marking**: Automatically marks elite mobs with Skull (8) and Cross (7)
+- **Caster Detection**: Marks mobs that are actively casting or channeling spells
+- **Mana User Detection**: Marks mobs that have mana bars
+- **Smart Prioritization**: Elites get Skull/Cross, other mobs get remaining marks
+- **Flexible Configuration**: Enable/disable marking for solo, party, or raid scenarios
+- **Permissions Aware**: Respects raid lead/assist requirements
+
+## ⚠️ Known Limitations
+
+**Delves with NPC Companions**: Due to Blizzard API restrictions, automatic marking does NOT work in delves when grouped with NPC companions (like Brann Bronzebeard). The `SetRaidTarget` API is protected in these scenarios and can only be invoked through manual player interaction. 
+
+**The addon works normally in:**
+- Regular 5-player dungeons with real players
+- Raids with real players  
+- Solo play (if enabled in settings)
 
 ## Installation
 
