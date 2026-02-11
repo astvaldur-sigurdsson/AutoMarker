@@ -392,7 +392,10 @@ local function TryMarkUnit(unit)
             return false 
         end
         
+        DebugPrint("TryMark: Calling ShouldMarkUnit...")
         local shouldMark, isEliteUnit = ShouldMarkUnit(unit)
+        DebugPrint("TryMark: ShouldMarkUnit returned: " .. tostring(shouldMark) .. ", isElite: " .. tostring(isEliteUnit))
+        
         if shouldMark then
             local mark = GetNextAvailableMark(isEliteUnit)
             if mark then
