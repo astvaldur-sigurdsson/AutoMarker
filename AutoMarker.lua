@@ -58,13 +58,24 @@ AutoMarkerDB = AutoMarkerDB or {
     markElites = true,
     markCasters = true,
     markManaUsers = true,
-    debug = false
+    debug = false,
+    debugLog = {} -- Store debug messages
 }
 
 -- Debug print function
 local function DebugPrint(msg)
     if AutoMarkerDB.debug then
+        local timestamp = date("%H:%M:%S")
+        local logMsg = timestamp .. " - " .. msg
         print("|cFF00FF00[AutoMarker]|r " .. msg)
+        
+        -- Also store in log
+        table.insert(AutoMarkerDB.debugLog, logMsg)
+        
+        -- Keep only last 100 messages
+        if #AutoMarkerDB.debugLog > 100 then
+            table.remove(AutoMarkerDB.debugLog, 1)
+        end
     end
 end
 
@@ -510,13 +521,42 @@ SlashCmdList["AUTOMARKER"] = function(msg)
         print("|cFF00FF00AutoMarker|r raid mode: " .. (AutoMarkerDB.enabledRaid and "enabled" or "disabled"))
     elseif command == "help" then
         print("|cFF00FF00AutoMarker Commands:|r")
-        print("/automarker or /am - Toggle addon on/off")
+        print("/automarker or /am - Open settings GUI")
+        print("/automarker toggle - Toggle addon on/off")
         print("/automarker config - Open settings panel")
         print("/automarker solo - Toggle solo mode")
         print("/automarker group - Toggle group mode")
         print("/automarker raid - Toggle raid mode")
         print("/automarker debug - Toggle debug messages")
+        print("/automarker status - Show current settings")
+        print("/automarker log - Show debug log")
+        print("/automarker clearlog - Clear debug log")
         print("/automarker help - Show this help")
+    elseif command == "status" then
+        print("|cFF00FF00AutoMarker Status:|r")
+        print("Enabled: " .. (AutoMarkerDB.enabled and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Debug: " .. (AutoMarkerDB.debug and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Solo: " .. (AutoMarkerDB.enabledSolo and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Group: " .. (AutoMarkerDB.enabledGroup and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Raid: " .. (AutoMarkerDB.enabledRaid and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Mark Elites: " .. (AutoMarkerDB.markElites and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Mark Mana: " .. (AutoMarkerDB.markManaUsers and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Mark Casters: " .. (AutoMarkerDB.markCasters and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("In Combat: " .. (UnitAffectingCombat("player") and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+        print("Group Type: " .. (IsInRaid() and "Raid" or (IsInGroup() and "Group" or "Solo")))
+        print("Can Mark: " .. (CanSetRaidTargets() and "|cFF00FF00Yes|r" or "|cFFFF0000No|r"))
+    elseif command == "log" then
+        if #AutoMarkerDB.debugLog == 0 then
+            print("|cFF00FF00AutoMarker|r Debug log is empty")
+        else
+            print("|cFF00FF00AutoMarker Debug Log:|r (last " .. #AutoMarkerDB.debugLog .. " messages)")
+            for _, msg in ipairs(AutoMarkerDB.debugLog) do
+                print(msg)
+            end
+        end
+    elseif command == "clearlog" then
+        AutoMarkerDB.debugLog = {}
+        print("|cFF00FF00AutoMarker|r Debug log cleared")
     else
         print("|cFF00FF00AutoMarker|r Unknown command. Use '/automarker help' for commands.")
     end
