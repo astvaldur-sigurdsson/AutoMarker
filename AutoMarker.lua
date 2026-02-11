@@ -69,6 +69,11 @@ local function DebugPrint(msg)
         local logMsg = timestamp .. " - " .. msg
         print("|cFF00FF00[AutoMarker]|r " .. msg)
         
+        -- Initialize debugLog if it doesn't exist
+        if not AutoMarkerDB.debugLog then
+            AutoMarkerDB.debugLog = {}
+        end
+        
         -- Also store in log
         table.insert(AutoMarkerDB.debugLog, logMsg)
         
