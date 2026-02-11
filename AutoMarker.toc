@@ -1,0 +1,8 @@
+## Interface: 120001
+## Title: AutoMarker
+## Notes: Automatically marks mobs in combat that have mana or cast bars
+## Author: astvaldurs
+## Version: 1.0.0
+## SavedVariables: AutoMarkerDB
+
+AutoMarker.lua

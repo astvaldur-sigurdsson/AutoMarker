@@ -1,0 +1,8 @@
+# WoW AddOn
+*.bak
+*.old
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
