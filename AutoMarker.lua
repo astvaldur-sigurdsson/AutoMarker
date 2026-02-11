@@ -385,24 +385,25 @@ end
 
 -- Scan nameplate units for marking
 local function ScanForTargets()
-    if not AutoMarkerDB.enabled then 
-        DebugPrint("Addon disabled")
-        return 
-    end
-    if not IsEnabledForCurrentGroup() then 
-        DebugPrint("Not enabled for current group type")
-        return 
-    end
-    if not UnitAffectingCombat("player") then 
-        DebugPrint("Player not in combat")
-        return 
-    end
-    if not CanSetRaidTargets() then 
-        DebugPrint("No permission to set raid targets")
-        return 
-    end
-    
-    DebugPrint("Scanning for targets...")
+    local success, err = pcall(function()
+        if not AutoMarkerDB.enabled then 
+            DebugPrint("Addon disabled")
+            return 
+        end
+        if not IsEnabledForCurrentGroup() then 
+            DebugPrint("Not enabled for current group type")
+            return 
+        end
+        if not UnitAffectingCombat("player") then 
+            DebugPrint("Player not in combat")
+            return 
+        end
+        if not CanSetRaidTargets() then 
+            DebugPrint("No permission to set raid targets")
+            return 
+        end
+        
+        DebugPrint("Scanning for targets...")
     
     -- First, check if we have a target
     if UnitExists("target") then
@@ -456,10 +457,16 @@ local function ScanForTargets()
         end
     end
     
-    -- Check focus
-    if UnitExists("focus") then
-        DebugPrint("Checking focus")
-        TryMarkUnit("focus")
+        -- Check focus
+        if UnitExists("focus") then
+            DebugPrint("Checking focus")
+            TryMarkUnit("focus")
+        end
+    end)
+    
+    if not success then
+        DebugPrint("ERROR in ScanForTargets: " .. tostring(err))
+        print("[AutoMarker] ERROR: " .. tostring(err))
     end
 end
 
@@ -469,9 +476,9 @@ local function OnPlayerEnterCombat()
     markedUnits = {} -- Reset tracked units
     currentMarkIndex = 1
     
-    -- Start scanning ticker (scan every 0.5 seconds)
+    -- Start scanning ticker (scan every 2 seconds to reduce spam)
     if not scanTicker then
-        scanTicker = C_Timer.NewTicker(0.5, function()
+        scanTicker = C_Timer.NewTicker(2, function()
             ScanForTargets()
         end)
     end
