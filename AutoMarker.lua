@@ -333,14 +333,25 @@ end
 
 -- Try to mark a unit
 local function TryMarkUnit(unit)
-    if not UnitExists(unit) then return false end
+    if not UnitExists(unit) then 
+        DebugPrint("TryMark: Unit doesn't exist")
+        return false 
+    end
+    
+    DebugPrint("TryMark: Unit exists - " .. (UnitName(unit) or "Unknown"))
     
     -- Get unit GUID for tracking
     local guid = UnitGUID(unit)
-    if not guid then return false end
+    if not guid then 
+        DebugPrint("TryMark: No GUID")
+        return false 
+    end
     
     -- Skip if we've already processed this unit
-    if markedUnits[guid] then return false end
+    if markedUnits[guid] then 
+        DebugPrint("TryMark: Already processed")
+        return false 
+    end
     
     local shouldMark, isEliteUnit = ShouldMarkUnit(unit)
     if shouldMark then
@@ -354,6 +365,8 @@ local function TryMarkUnit(unit)
         else
             DebugPrint("No available marks")
         end
+    else
+        DebugPrint("TryMark: Should not mark this unit")
     end
     
     return false
@@ -395,14 +408,20 @@ local function ScanForTargets()
     local nameplates = C_NamePlate.GetNamePlates()
     if nameplates then
         DebugPrint("Found " .. #nameplates .. " nameplates")
-        for _, nameplate in ipairs(nameplates) do
-            if nameplate and nameplate.namePlateUnitToken then
-                DebugPrint("Checking nameplate: " .. nameplate.namePlateUnitToken)
-                TryMarkUnit(nameplate.namePlateUnitToken)
+        for i, nameplate in ipairs(nameplates) do
+            if nameplate then
+                if nameplate.namePlateUnitToken then
+                    DebugPrint("Nameplate " .. i .. ": Token=" .. nameplate.namePlateUnitToken)
+                    TryMarkUnit(nameplate.namePlateUnitToken)
+                else
+                    DebugPrint("Nameplate " .. i .. ": No unit token")
+                end
+            else
+                DebugPrint("Nameplate " .. i .. ": Is nil")
             end
         end
     else
-        DebugPrint("No nameplates found")
+        DebugPrint("C_NamePlate.GetNamePlates() returned nil")
     end
     
     -- Also check target and focus
