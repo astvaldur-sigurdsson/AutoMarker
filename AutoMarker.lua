@@ -443,12 +443,32 @@ local function ScanForTargets()
     
     -- First, check if we have a target
     if UnitExists("target") then
-        local success, tName = pcall(UnitName, "target")
-        tName = success and tName or "Unknown"
-        local tIsElite = IsElite("target")
-        local tHasMana = HasMana("target")
-        local tIsCasting = IsCasting("target")
-        DebugPrint("Target exists: " .. tName .. " | Elite:" .. tostring(tIsElite) .. " | Mana:" .. tostring(tHasMana) .. " | Casting:" .. tostring(tIsCasting))
+        local tName = "Unknown"
+        local tIsElite = false
+        local tHasMana = false
+        local tIsCasting = false
+        
+        local success, name = pcall(UnitName, "target")
+        if success and name then
+            tName = name
+        end
+        
+        local success2, elite = pcall(IsElite, "target")
+        if success2 then
+            tIsElite = elite
+        end
+        
+        local success3, mana = pcall(HasMana, "target")
+        if success3 then
+            tHasMana = mana
+        end
+        
+        local success4, casting = pcall(IsCasting, "target")
+        if success4 then
+            tIsCasting = casting
+        end
+        
+        DebugPrint("Target exists: " .. tostring(tName) .. " | Elite:" .. tostring(tIsElite) .. " | Mana:" .. tostring(tHasMana) .. " | Casting:" .. tostring(tIsCasting))
         TryMarkUnit("target")
     else
         DebugPrint("No target selected")
