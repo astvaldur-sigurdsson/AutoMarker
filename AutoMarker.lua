@@ -469,7 +469,10 @@ local function ScanForTargets()
         end
         
         DebugPrint("Target exists: " .. tostring(tName) .. " | Elite:" .. tostring(tIsElite) .. " | Mana:" .. tostring(tHasMana) .. " | Casting:" .. tostring(tIsCasting))
-        TryMarkUnit("target")
+        local success_mark, err_mark = pcall(TryMarkUnit, "target")
+        if not success_mark then
+            DebugPrint("ERROR marking target: " .. tostring(err_mark))
+        end
     else
         DebugPrint("No target selected")
     end
@@ -510,14 +513,20 @@ local function ScanForTargets()
         local unit = "nameplate" .. i
         if UnitExists(unit) then
             DebugPrint("Found nameplate unit: " .. unit)
-            TryMarkUnit(unit)
+            local success_mark, err_mark = pcall(TryMarkUnit, unit)
+            if not success_mark then
+                DebugPrint("ERROR marking nameplate: " .. tostring(err_mark))
+            end
         end
     end
     
         -- Check focus
         if UnitExists("focus") then
             DebugPrint("Checking focus")
-            TryMarkUnit("focus")
+            local success_mark, err_mark = pcall(TryMarkUnit, "focus")
+            if not success_mark then
+                DebugPrint("ERROR marking focus: " .. tostring(err_mark))
+            end
         end
     end)
     
