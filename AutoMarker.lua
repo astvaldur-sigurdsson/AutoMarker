@@ -404,10 +404,31 @@ local function ScanForTargets()
     
     DebugPrint("Scanning for targets...")
     
+    -- First, check if we have a target
+    if UnitExists("target") then
+        local tName = UnitName("target") or "Unknown"
+        local tIsElite = IsElite("target")
+        local tHasMana = HasMana("target")
+        local tIsCasting = IsCasting("target")
+        DebugPrint("Target exists: " .. tName .. " | Elite:" .. tostring(tIsElite) .. " | Mana:" .. tostring(tHasMana) .. " | Casting:" .. tostring(tIsCasting))
+        TryMarkUnit("target")
+    else
+        DebugPrint("No target selected")
+    end
+    
     -- Check nameplate units using modern API
+    DebugPrint("Checking C_NamePlate API...")
     local nameplates = C_NamePlate.GetNamePlates()
+    DebugPrint("C_NamePlate.GetNamePlates() returned: " .. type(nameplates))
+    
     if nameplates then
-        DebugPrint("Found " .. #nameplates .. " nameplates")
+        local count = #nameplates
+        DebugPrint("Found " .. count .. " nameplates")
+        
+        if count == 0 then
+            DebugPrint("Nameplate array is empty - are enemy nameplates enabled?")
+        end
+        
         for i, nameplate in ipairs(nameplates) do
             if nameplate then
                 if nameplate.namePlateUnitToken then
@@ -424,12 +445,7 @@ local function ScanForTargets()
         DebugPrint("C_NamePlate.GetNamePlates() returned nil")
     end
     
-    -- Also check target and focus
-    if UnitExists("target") then
-        DebugPrint("Checking target")
-        TryMarkUnit("target")
-    end
-    
+    -- Check focus
     if UnitExists("focus") then
         DebugPrint("Checking focus")
         TryMarkUnit("focus")
