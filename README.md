@@ -13,12 +13,13 @@ A World of Warcraft addon that automatically marks mobs in combat based on their
 
 ## ⚠️ Known Limitations
 
-**Delves with NPC Companions**: Due to Blizzard API restrictions, automatic marking does NOT work in delves when grouped with NPC companions (like Brann Bronzebeard). The `SetRaidTarget` API is protected in these scenarios and can only be invoked through manual player interaction. 
+**Delves & Follower Dungeons with NPCs**: Due to Blizzard API restrictions, automatic marking does NOT work in delves or follower dungeons when grouped with NPC companions (like Brann Bronzebeard or AI followers). The `SetRaidTarget` API is protected in these scenarios and can only be invoked through manual player interaction. 
 
 **The addon works normally in:**
-- Regular 5-player dungeons with real players
+- Regular dungeons (solo or with real players)
+- Heroic/Mythic/Mythic+ dungeons with real players
 - Raids with real players  
-- Solo play (if enabled in settings)
+- Solo play in open world (if enabled in settings)
 
 ## Installation
 
