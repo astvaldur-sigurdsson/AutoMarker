@@ -36,7 +36,9 @@ local AutoMarker = CreateFrame("Frame")
 -- Default settings
 AutoMarkerDB = AutoMarkerDB or {
     enabled = true,
-    onlyInGroup = true,
+    enabledSolo = false,
+    enabledGroup = true,
+    enabledRaid = true,
     markCasters = true,
     markManaUsers = true,
     debug = false
@@ -46,6 +48,106 @@ AutoMarkerDB = AutoMarkerDB or {
 local function DebugPrint(msg)
     if AutoMarkerDB.debug then
         print("|cFF00FF00[AutoMarker]|r " .. msg)
+    end
+end
+
+-- Create settings panel
+function CreateSettingsPanel()
+    local panel = CreateFrame("Frame", "AutoMarkerSettingsPanel", UIParent)
+    panel.name = "AutoMarker"
+    
+    -- Title
+    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, -16)
+    title:SetText("AutoMarker Settings")
+    
+    -- Description
+    local desc = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+    desc:SetText("Automatically marks mobs in combat with mana or cast bars")
+    
+    -- Master enable checkbox
+    local enableCheck = CreateFrame("CheckButton", "AutoMarkerEnableCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    enableCheck:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -16)
+    enableCheck.Text:SetText("Enable AutoMarker")
+    enableCheck:SetChecked(AutoMarkerDB.enabled)
+    enableCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.enabled = self:GetChecked()
+        print("|cFF00FF00AutoMarker|r " .. (AutoMarkerDB.enabled and "enabled" or "disabled"))
+    end)
+    
+    -- Group type header
+    local groupHeader = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    groupHeader:SetPoint("TOPLEFT", enableCheck, "BOTTOMLEFT", 0, -20)
+    groupHeader:SetText("Enable for:")
+    
+    -- Solo checkbox
+    local soloCheck = CreateFrame("CheckButton", "AutoMarkerSoloCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    soloCheck:SetPoint("TOPLEFT", groupHeader, "BOTTOMLEFT", 16, -8)
+    soloCheck.Text:SetText("Solo play")
+    soloCheck:SetChecked(AutoMarkerDB.enabledSolo)
+    soloCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.enabledSolo = self:GetChecked()
+    end)
+    
+    -- Group checkbox
+    local groupCheck = CreateFrame("CheckButton", "AutoMarkerGroupCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    groupCheck:SetPoint("TOPLEFT", soloCheck, "BOTTOMLEFT", 0, -8)
+    groupCheck.Text:SetText("Party (5-player dungeons)")
+    groupCheck:SetChecked(AutoMarkerDB.enabledGroup)
+    groupCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.enabledGroup = self:GetChecked()
+    end)
+    
+    -- Raid checkbox
+    local raidCheck = CreateFrame("CheckButton", "AutoMarkerRaidCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    raidCheck:SetPoint("TOPLEFT", groupCheck, "BOTTOMLEFT", 0, -8)
+    raidCheck.Text:SetText("Raid (requires lead/assist)")
+    raidCheck:SetChecked(AutoMarkerDB.enabledRaid)
+    raidCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.enabledRaid = self:GetChecked()
+    end)
+    
+    -- Detection options header
+    local detectHeader = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    detectHeader:SetPoint("TOPLEFT", raidCheck, "BOTTOMLEFT", -16, -20)
+    detectHeader:SetText("Mark mobs that have:")
+    
+    -- Mana checkbox
+    local manaCheck = CreateFrame("CheckButton", "AutoMarkerManaCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    manaCheck:SetPoint("TOPLEFT", detectHeader, "BOTTOMLEFT", 16, -8)
+    manaCheck.Text:SetText("Mana bars")
+    manaCheck:SetChecked(AutoMarkerDB.markManaUsers)
+    manaCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.markManaUsers = self:GetChecked()
+    end)
+    
+    -- Casting checkbox
+    local castCheck = CreateFrame("CheckButton", "AutoMarkerCastCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    castCheck:SetPoint("TOPLEFT", manaCheck, "BOTTOMLEFT", 0, -8)
+    castCheck.Text:SetText("Cast/Channel bars")
+    castCheck:SetChecked(AutoMarkerDB.markCasters)
+    castCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.markCasters = self:GetChecked()
+    end)
+    
+    -- Debug checkbox
+    local debugCheck = CreateFrame("CheckButton", "AutoMarkerDebugCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    debugCheck:SetPoint("TOPLEFT", castCheck, "BOTTOMLEFT", 0, -20)
+    debugCheck.Text:SetText("Debug mode (show detailed messages)")
+    debugCheck:SetChecked(AutoMarkerDB.debug)
+    debugCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.debug = self:GetChecked()
+    end)
+    
+    -- Register with interface options
+    if Settings and Settings.RegisterCanvasLayoutCategory then
+        -- WoW 10.0+ API
+        local category = Settings.RegisterCanvasLayoutCategory(panel, "AutoMarker")
+        Settings.RegisterAddOnCategory(category)
+    else
+        -- Legacy API
+        InterfaceOptions_AddCategory(panel)
     end
 end
 
@@ -193,10 +295,21 @@ local function TryMarkUnit(unit)
     return false
 end
 
+-- Check if auto-marking is enabled for current group type
+local function IsEnabledForCurrentGroup()
+    if IsInRaid() then
+        return AutoMarkerDB.enabledRaid
+    elseif IsInGroup() then
+        return AutoMarkerDB.enabledGroup
+    else
+        return AutoMarkerDB.enabledSolo
+    end
+end
+
 -- Scan nameplate units for marking
 local function ScanForTargets()
     if not AutoMarkerDB.enabled then return end
-    if AutoMarkerDB.onlyInGroup and not IsInGroupOrRaid() then return end
+    if not IsEnabledForCurrentGroup() then return end
     if not UnitAffectingCombat("player") then return end
     if not CanSetRaidTargets() then 
         if AutoMarkerDB.debug then
@@ -273,6 +386,8 @@ local function OnEvent(self, event, ...)
         local addonLoaded = ...
         if addonLoaded == addonName then
             print("|cFF00FF00AutoMarker|r loaded. Use /automarker for commands.")
+            -- Create settings panel
+            C_Timer.After(1, CreateSettingsPanel)
         end
     end
 end
@@ -297,17 +412,34 @@ SlashCmdList["AUTOMARKER"] = function(msg)
     if command == "toggle" or command == "" then
         AutoMarkerDB.enabled = not AutoMarkerDB.enabled
         print("|cFF00FF00AutoMarker|r " .. (AutoMarkerDB.enabled and "enabled" or "disabled"))
+    elseif command == "config" or command == "settings" then
+        -- Open settings panel
+        if Settings and Settings.OpenToCategory then
+            Settings.OpenToCategory("AutoMarker")
+        else
+            InterfaceOptionsFrame_OpenToCategory("AutoMarker")
+            InterfaceOptionsFrame_OpenToCategory("AutoMarker") -- Call twice for classic bug
+        end
     elseif command == "debug" then
         AutoMarkerDB.debug = not AutoMarkerDB.debug
         print("|cFF00FF00AutoMarker|r debug mode " .. (AutoMarkerDB.debug and "enabled" or "disabled"))
+    elseif command == "solo" then
+        AutoMarkerDB.enabledSolo = not AutoMarkerDB.enabledSolo
+        print("|cFF00FF00AutoMarker|r solo mode: " .. (AutoMarkerDB.enabledSolo and "enabled" or "disabled"))
     elseif command == "group" then
-        AutoMarkerDB.onlyInGroup = not AutoMarkerDB.onlyInGroup
-        print("|cFF00FF00AutoMarker|r only in group: " .. (AutoMarkerDB.onlyInGroup and "yes" or "no"))
+        AutoMarkerDB.enabledGroup = not AutoMarkerDB.enabledGroup
+        print("|cFF00FF00AutoMarker|r group mode: " .. (AutoMarkerDB.enabledGroup and "enabled" or "disabled"))
+    elseif command == "raid" then
+        AutoMarkerDB.enabledRaid = not AutoMarkerDB.enabledRaid
+        print("|cFF00FF00AutoMarker|r raid mode: " .. (AutoMarkerDB.enabledRaid and "enabled" or "disabled"))
     elseif command == "help" then
         print("|cFF00FF00AutoMarker Commands:|r")
         print("/automarker or /am - Toggle addon on/off")
+        print("/automarker config - Open settings panel")
+        print("/automarker solo - Toggle solo mode")
+        print("/automarker group - Toggle group mode")
+        print("/automarker raid - Toggle raid mode")
         print("/automarker debug - Toggle debug messages")
-        print("/automarker group - Toggle 'only in group' requirement")
         print("/automarker help - Show this help")
     else
         print("|cFF00FF00AutoMarker|r Unknown command. Use '/automarker help' for commands.")
