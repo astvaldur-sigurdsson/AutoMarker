@@ -13,8 +13,24 @@ local MARKS = {
     STAR = 1
 }
 
--- Priority order for marking (skull for casters/mana users)
-local MARK_PRIORITY = {
+-- Priority order for marking elites
+local ELITE_MARK_PRIORITY = {
+    MARKS.SKULL,
+    MARKS.CROSS
+}
+
+-- Priority order for marking non-elites (casters/mana users)
+local NORMAL_MARK_PRIORITY = {
+    MARKS.DIAMOND,
+    MARKS.SQUARE,
+    MARKS.MOON,
+    MARKS.TRIANGLE,
+    MARKS.CIRCLE,
+    MARKS.STAR
+}
+
+-- Combined priority list for checking used marks
+local ALL_MARKS = {
     MARKS.SKULL,
     MARKS.CROSS,
     MARKS.DIAMOND,
@@ -39,6 +55,7 @@ AutoMarkerDB = AutoMarkerDB or {
     enabledSolo = false,
     enabledGroup = true,
     enabledRaid = true,
+    markElites = true,
     markCasters = true,
     markManaUsers = true,
     debug = false
@@ -111,12 +128,21 @@ function CreateSettingsPanel()
     -- Detection options header
     local detectHeader = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     detectHeader:SetPoint("TOPLEFT", raidCheck, "BOTTOMLEFT", -16, -20)
-    detectHeader:SetText("Mark mobs that have:")
+    detectHeader:SetText("Mark mobs that are:")
+    
+    -- Elite checkbox
+    local eliteCheck = CreateFrame("CheckButton", "AutoMarkerEliteCheck", panel, "InterfaceOptionsCheckButtonTemplate")
+    eliteCheck:SetPoint("TOPLEFT", detectHeader, "BOTTOMLEFT", 16, -8)
+    eliteCheck.Text:SetText("Elite mobs (Skull/Cross)")
+    eliteCheck:SetChecked(AutoMarkerDB.markElites)
+    eliteCheck:SetScript("OnClick", function(self)
+        AutoMarkerDB.markElites = self:GetChecked()
+    end)
     
     -- Mana checkbox
     local manaCheck = CreateFrame("CheckButton", "AutoMarkerManaCheck", panel, "InterfaceOptionsCheckButtonTemplate")
-    manaCheck:SetPoint("TOPLEFT", detectHeader, "BOTTOMLEFT", 16, -8)
-    manaCheck.Text:SetText("Mana bars")
+    manaCheck:SetPoint("TOPLEFT", eliteCheck, "BOTTOMLEFT", 0, -8)
+    manaCheck.Text:SetText("Mana users")
     manaCheck:SetChecked(AutoMarkerDB.markManaUsers)
     manaCheck:SetScript("OnClick", function(self)
         AutoMarkerDB.markManaUsers = self:GetChecked()
@@ -125,7 +151,7 @@ function CreateSettingsPanel()
     -- Casting checkbox
     local castCheck = CreateFrame("CheckButton", "AutoMarkerCastCheck", panel, "InterfaceOptionsCheckButtonTemplate")
     castCheck:SetPoint("TOPLEFT", manaCheck, "BOTTOMLEFT", 0, -8)
-    castCheck.Text:SetText("Cast/Channel bars")
+    castCheck.Text:SetText("Casters/Channelers")
     castCheck:SetChecked(AutoMarkerDB.markCasters)
     castCheck:SetScript("OnClick", function(self)
         AutoMarkerDB.markCasters = self:GetChecked()
@@ -196,8 +222,17 @@ local function IsCasting(unit)
     return name ~= nil or channelName ~= nil
 end
 
--- Get next available mark
-local function GetNextAvailableMark()
+-- Check if a unit is elite
+local function IsElite(unit)
+    if not UnitExists(unit) then return false end
+    
+    local classification = UnitClassification(unit)
+    -- "elite" = elite, "rareelite" = rare elite, "worldboss" = boss
+    return classification == "elite" or classification == "rareelite" or classification == "worldboss"
+end
+
+-- Get next available mark (with priority list based on elite status)
+local function GetNextAvailableMark(isEliteUnit)
     -- Check which marks are already in use
     local usedMarks = {}
     
@@ -232,8 +267,11 @@ local function GetNextAvailableMark()
         end
     end
     
+    -- Choose priority list based on whether unit is elite
+    local priorityList = isEliteUnit and ELITE_MARK_PRIORITY or NORMAL_MARK_PRIORITY
+    
     -- Return first unused mark from priority list
-    for _, markNum in ipairs(MARK_PRIORITY) do
+    for _, markNum in ipairs(priorityList) do
         if not usedMarks[markNum] then
             return markNum
         end
@@ -244,29 +282,42 @@ end
 
 -- Check if unit should be marked
 local function ShouldMarkUnit(unit)
-    if not UnitExists(unit) then return false end
-    if not UnitCanAttack("player", unit) then return false end
-    if UnitIsDead(unit) then return false end
-    if not UnitAffectingCombat(unit) then return false end
+    if not UnitExists(unit) then return false, false end
+    if not UnitCanAttack("player", unit) then 
+        DebugPrint("Unit can't be attacked: " .. (UnitName(unit) or "Unknown"))
+        return false, false 
+    end
+    if UnitIsDead(unit) then 
+        DebugPrint("Unit is dead: " .. (UnitName(unit) or "Unknown"))
+        return false, false 
+    end
+    -- Removed strict combat check - mark any enemy in range
     
     -- Check if already marked
     if GetRaidTargetIndex(unit) then
-        return false
+        return false, false
     end
     
-    -- Check if unit has mana
+    local isEliteUnit = IsElite(unit)
+    
+    -- Mark elites if enabled
+    if isEliteUnit and AutoMarkerDB.markElites then
+        DebugPrint("Found elite unit: " .. (UnitName(unit) or "Unknown"))
+        return true, true
+    end
+    
+    -- For non-elites, check if they have mana or are casting
     if AutoMarkerDB.markManaUsers and HasMana(unit) then
         DebugPrint("Found unit with mana: " .. (UnitName(unit) or "Unknown"))
-        return true
+        return true, false
     end
     
-    -- Check if unit is casting
     if AutoMarkerDB.markCasters and IsCasting(unit) then
         DebugPrint("Found casting unit: " .. (UnitName(unit) or "Unknown"))
-        return true
+        return true, false
     end
     
-    return false
+    return false, false
 end
 
 -- Try to mark a unit
@@ -280,12 +331,14 @@ local function TryMarkUnit(unit)
     -- Skip if we've already processed this unit
     if markedUnits[guid] then return false end
     
-    if ShouldMarkUnit(unit) then
-        local mark = GetNextAvailableMark()
+    local shouldMark, isEliteUnit = ShouldMarkUnit(unit)
+    if shouldMark then
+        local mark = GetNextAvailableMark(isEliteUnit)
         if mark then
             SetRaidTarget(unit, mark)
             markedUnits[guid] = true
-            DebugPrint("Marked " .. (UnitName(unit) or "Unknown") .. " with mark " .. mark)
+            local eliteStr = isEliteUnit and " (elite)" or ""
+            DebugPrint("Marked " .. (UnitName(unit) or "Unknown") .. eliteStr .. " with mark " .. mark)
             return true
         else
             DebugPrint("No available marks")
@@ -308,32 +361,47 @@ end
 
 -- Scan nameplate units for marking
 local function ScanForTargets()
-    if not AutoMarkerDB.enabled then return end
-    if not IsEnabledForCurrentGroup() then return end
-    if not UnitAffectingCombat("player") then return end
-    if not CanSetRaidTargets() then 
-        if AutoMarkerDB.debug then
-            DebugPrint("No permission to set raid targets")
-        end
+    if not AutoMarkerDB.enabled then 
+        DebugPrint("Addon disabled")
         return 
     end
+    if not IsEnabledForCurrentGroup() then 
+        DebugPrint("Not enabled for current group type")
+        return 
+    end
+    if not UnitAffectingCombat("player") then 
+        DebugPrint("Player not in combat")
+        return 
+    end
+    if not CanSetRaidTargets() then 
+        DebugPrint("No permission to set raid targets")
+        return 
+    end
+    
+    DebugPrint("Scanning for targets...")
     
     -- Check nameplate units using modern API
     local nameplates = C_NamePlate.GetNamePlates()
     if nameplates then
+        DebugPrint("Found " .. #nameplates .. " nameplates")
         for _, nameplate in ipairs(nameplates) do
             if nameplate and nameplate.namePlateUnitToken then
+                DebugPrint("Checking nameplate: " .. nameplate.namePlateUnitToken)
                 TryMarkUnit(nameplate.namePlateUnitToken)
             end
         end
+    else
+        DebugPrint("No nameplates found")
     end
     
     -- Also check target and focus
     if UnitExists("target") then
+        DebugPrint("Checking target")
         TryMarkUnit("target")
     end
     
     if UnitExists("focus") then
+        DebugPrint("Checking focus")
         TryMarkUnit("focus")
     end
 end
