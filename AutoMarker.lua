@@ -396,19 +396,31 @@ local function TryMarkUnit(unit)
         if shouldMark then
             local mark = GetNextAvailableMark(isEliteUnit)
             if mark then
+                DebugPrint("Attempting to set mark " .. mark .. " on unit")
+                
                 local success4, err = pcall(SetRaidTarget, unit, mark)
                 if not success4 then
                     DebugPrint("Failed to set raid target: " .. tostring(err))
                     return false
                 end
                 
-                -- Verify the mark was set
-                C_Timer.After(0.1, function()
-                    local success_verify, currentMark = pcall(GetRaidTargetIndex, unit)
-                    if success_verify and currentMark then
-                        DebugPrint("VERIFIED: Mark " .. currentMark .. " is on unit")
+                -- Immediately verify the mark was set
+                local success_verify, currentMark = pcall(GetRaidTargetIndex, unit)
+                if success_verify and currentMark == mark then
+                    DebugPrint("SUCCESS: Mark " .. mark .. " verified immediately")
+                else
+                    DebugPrint("FAILED: Mark did not apply. CurrentMark=" .. tostring(currentMark))
+                    DebugPrint("This may be due to instance restrictions or another addon")
+                    return false
+                end
+                
+                -- Verify again after a short delay
+                C_Timer.After(0.5, function()
+                    local success_verify2, currentMark2 = pcall(GetRaidTargetIndex, unit)
+                    if success_verify2 and currentMark2 == mark then
+                        DebugPrint("Mark " .. mark .. " still present after 0.5s")
                     else
-                        DebugPrint("WARNING: Mark was not set or was cleared!")
+                        DebugPrint("WARNING: Mark was cleared after 0.5s! CurrentMark=" .. tostring(currentMark2))
                     end
                 end)
                 
