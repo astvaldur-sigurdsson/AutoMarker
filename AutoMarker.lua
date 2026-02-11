@@ -402,6 +402,16 @@ local function TryMarkUnit(unit)
                     return false
                 end
                 
+                -- Verify the mark was set
+                C_Timer.After(0.1, function()
+                    local success_verify, currentMark = pcall(GetRaidTargetIndex, unit)
+                    if success_verify and currentMark then
+                        DebugPrint("VERIFIED: Mark " .. currentMark .. " is on unit")
+                    else
+                        DebugPrint("WARNING: Mark was not set or was cleared!")
+                    end
+                end)
+                
                 -- Mark as processed (protected write)
                 pcall(function()
                     markedUnits[guid] = true
