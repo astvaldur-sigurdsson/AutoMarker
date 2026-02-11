@@ -300,11 +300,15 @@ end
 local function ShouldMarkUnit(unit)
     if not UnitExists(unit) then return false, false end
     if not UnitCanAttack("player", unit) then 
-        DebugPrint("Unit can't be attacked: " .. (UnitName(unit) or "Unknown"))
+        local success, name = pcall(UnitName, unit)
+        name = success and name or "Unknown"
+        DebugPrint("Unit can't be attacked: " .. name)
         return false, false 
     end
     if UnitIsDead(unit) then 
-        DebugPrint("Unit is dead: " .. (UnitName(unit) or "Unknown"))
+        local success, name = pcall(UnitName, unit)
+        name = success and name or "Unknown"
+        DebugPrint("Unit is dead: " .. name)
         return false, false 
     end
     -- Removed strict combat check - mark any enemy in range
@@ -318,18 +322,24 @@ local function ShouldMarkUnit(unit)
     
     -- Mark elites if enabled
     if isEliteUnit and AutoMarkerDB.markElites then
-        DebugPrint("Found elite unit: " .. (UnitName(unit) or "Unknown"))
+        local success, name = pcall(UnitName, unit)
+        name = success and name or "Unknown"
+        DebugPrint("Found elite unit: " .. name)
         return true, true
     end
     
     -- For non-elites, check if they have mana or are casting
     if AutoMarkerDB.markManaUsers and HasMana(unit) then
-        DebugPrint("Found unit with mana: " .. (UnitName(unit) or "Unknown"))
+        local success, name = pcall(UnitName, unit)
+        name = success and name or "Unknown"
+        DebugPrint("Found unit with mana: " .. name)
         return true, false
     end
     
     if AutoMarkerDB.markCasters and IsCasting(unit) then
-        DebugPrint("Found casting unit: " .. (UnitName(unit) or "Unknown"))
+        local success, name = pcall(UnitName, unit)
+        name = success and name or "Unknown"
+        DebugPrint("Found casting unit: " .. name)
         return true, false
     end
     
@@ -343,7 +353,9 @@ local function TryMarkUnit(unit)
         return false 
     end
     
-    DebugPrint("TryMark: Unit exists - " .. (UnitName(unit) or "Unknown"))
+    local success, unitName = pcall(UnitName, unit)
+    unitName = success and unitName or "Unknown"
+    DebugPrint("TryMark: Unit exists - " .. unitName)
     
     -- Get unit GUID for tracking
     local guid = UnitGUID(unit)
@@ -365,7 +377,9 @@ local function TryMarkUnit(unit)
             SetRaidTarget(unit, mark)
             markedUnits[guid] = true
             local eliteStr = isEliteUnit and " (elite)" or ""
-            DebugPrint("Marked " .. (UnitName(unit) or "Unknown") .. eliteStr .. " with mark " .. mark)
+            local success2, name = pcall(UnitName, unit)
+            name = success2 and name or "Unknown"
+            DebugPrint("Marked " .. name .. eliteStr .. " with mark " .. mark)
             return true
         else
             DebugPrint("No available marks")
@@ -412,7 +426,8 @@ local function ScanForTargets()
     
     -- First, check if we have a target
     if UnitExists("target") then
-        local tName = UnitName("target") or "Unknown"
+        local success, tName = pcall(UnitName, "target")
+        tName = success and tName or "Unknown"
         local tIsElite = IsElite("target")
         local tHasMana = HasMana("target")
         local tIsCasting = IsCasting("target")
