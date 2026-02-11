@@ -421,26 +421,25 @@ end
 
 -- Scan nameplate units for marking
 local function ScanForTargets()
-    local success, err = pcall(function()
-        if not AutoMarkerDB.enabled then 
-            DebugPrint("Addon disabled")
-            return 
-        end
-        if not IsEnabledForCurrentGroup() then 
-            DebugPrint("Not enabled for current group type")
-            return 
-        end
-        if not UnitAffectingCombat("player") then 
-            DebugPrint("Player not in combat")
-            return 
-        end
-        if not CanSetRaidTargets() then 
-            DebugPrint("No permission to set raid targets")
-            return 
-        end
-        
-        DebugPrint("Scanning for targets...")
+    if not AutoMarkerDB.enabled then 
+        DebugPrint("Addon disabled")
+        return 
+    end
+    if not IsEnabledForCurrentGroup() then 
+        DebugPrint("Not enabled for current group type")
+        return 
+    end
+    if not UnitAffectingCombat("player") then 
+        DebugPrint("Player not in combat")
+        return 
+    end
+    if not CanSetRaidTargets() then 
+        DebugPrint("No permission to set raid targets")
+        return 
+    end
     
+    DebugPrint("Scanning for targets...")
+
     -- First, check if we have a target
     if UnitExists("target") then
         local tName = "Unknown"
@@ -520,19 +519,13 @@ local function ScanForTargets()
         end
     end
     
-        -- Check focus
-        if UnitExists("focus") then
-            DebugPrint("Checking focus")
-            local success_mark, err_mark = pcall(TryMarkUnit, "focus")
-            if not success_mark then
-                DebugPrint("ERROR marking focus: " .. tostring(err_mark))
-            end
+    -- Check focus
+    if UnitExists("focus") then
+        DebugPrint("Checking focus")
+        local success_mark, err_mark = pcall(TryMarkUnit, "focus")
+        if not success_mark then
+            DebugPrint("ERROR marking focus: " .. tostring(err_mark))
         end
-    end)
-    
-    if not success then
-        DebugPrint("ERROR in ScanForTargets: " .. tostring(err))
-        print("[AutoMarker] ERROR: " .. tostring(err))
     end
 end
 
