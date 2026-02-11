@@ -110,7 +110,7 @@ function CreateSettingsPanel()
     -- Group checkbox
     local groupCheck = CreateFrame("CheckButton", "AutoMarkerGroupCheck", panel, "InterfaceOptionsCheckButtonTemplate")
     groupCheck:SetPoint("TOPLEFT", soloCheck, "BOTTOMLEFT", 0, -8)
-    groupCheck.Text:SetText("Party (5-player dungeons)")
+    groupCheck.Text:SetText("Party (dungeons/delves with NPCs)")
     groupCheck:SetChecked(AutoMarkerDB.enabledGroup)
     groupCheck:SetScript("OnClick", function(self)
         AutoMarkerDB.enabledGroup = self:GetChecked()
@@ -477,7 +477,15 @@ SLASH_AUTOMARKER2 = "/am"
 SlashCmdList["AUTOMARKER"] = function(msg)
     local command = string.lower(msg)
     
-    if command == "toggle" or command == "" then
+    if command == "" then
+        -- Open settings panel
+        if Settings and Settings.OpenToCategory then
+            Settings.OpenToCategory("AutoMarker")
+        else
+            InterfaceOptionsFrame_OpenToCategory("AutoMarker")
+            InterfaceOptionsFrame_OpenToCategory("AutoMarker") -- Call twice for classic bug
+        end
+    elseif command == "toggle" then
         AutoMarkerDB.enabled = not AutoMarkerDB.enabled
         print("|cFF00FF00AutoMarker|r " .. (AutoMarkerDB.enabled and "enabled" or "disabled"))
     elseif command == "config" or command == "settings" then
