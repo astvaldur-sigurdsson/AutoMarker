@@ -263,8 +263,8 @@ local function GetNextAvailableMark(isEliteUnit)
         for i = 1, 40 do
             local unit = "raid" .. i .. "target"
             if UnitExists(unit) then
-                local mark = GetRaidTargetIndex(unit)
-                if mark then
+                local success, mark = pcall(GetRaidTargetIndex, unit)
+                if success and mark then
                     usedMarks[mark] = true
                 end
             end
@@ -273,8 +273,8 @@ local function GetNextAvailableMark(isEliteUnit)
         for i = 1, 4 do
             local unit = "party" .. i .. "target"
             if UnitExists(unit) then
-                local mark = GetRaidTargetIndex(unit)
-                if mark then
+                local success, mark = pcall(GetRaidTargetIndex, unit)
+                if success and mark then
                     usedMarks[mark] = true
                 end
             end
@@ -283,8 +283,8 @@ local function GetNextAvailableMark(isEliteUnit)
     
     -- Check player target
     if UnitExists("target") then
-        local mark = GetRaidTargetIndex("target")
-        if mark then
+        local success, mark = pcall(GetRaidTargetIndex, "target")
+        if success and mark then
             usedMarks[mark] = true
         end
     end
@@ -387,7 +387,11 @@ local function TryMarkUnit(unit)
     if shouldMark then
         local mark = GetNextAvailableMark(isEliteUnit)
         if mark then
-            SetRaidTarget(unit, mark)
+            local success3, err = pcall(SetRaidTarget, unit, mark)
+            if not success3 then
+                DebugPrint("Failed to set raid target: " .. tostring(err))
+                return false
+            end
             markedUnits[guid] = true
             local eliteStr = isEliteUnit and " (elite)" or ""
             local success2, name = pcall(UnitName, unit)
