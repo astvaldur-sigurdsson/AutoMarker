@@ -716,6 +716,31 @@ SlashCmdList["AUTOMARKER"] = function(msg)
     elseif command == "clearlog" then
         AutoMarkerDB.debugLog = {}
         print("|cFF00FF00AutoMarker|r Debug log cleared")
+    elseif command == "test" or command == "testmark" then
+        if not UnitExists("target") then
+            print("|cFF00FF00AutoMarker|r No target selected")
+        else
+            local name = UnitName("target") or "Unknown"
+            print("|cFF00FF00AutoMarker|r Testing mark on: " .. name)
+            
+            -- Try to set skull mark
+            local success, err = pcall(SetRaidTarget, "target", 8)
+            if not success then
+                print("ERROR calling SetRaidTarget: " .. tostring(err))
+            else
+                print("SetRaidTarget called successfully")
+            end
+            
+            -- Check if it worked
+            C_Timer.After(0.1, function()
+                local success2, mark = pcall(GetRaidTargetIndex, "target")
+                if success2 and mark then
+                    print("SUCCESS! Target has mark: " .. mark)
+                else
+                    print("FAILED! Target has no mark. Mark=" .. tostring(mark))
+                end
+            end)
+        end
     else
         print("|cFF00FF00AutoMarker|r Unknown command. Use '/automarker help' for commands.")
     end
